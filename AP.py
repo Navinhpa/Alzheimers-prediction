@@ -1,49 +1,78 @@
 import streamlit as st
 import pandas as pd
+
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
 
-st.title("Alzheimer Disease Prediction")
+# Page title
+st.title("🧠 Alzheimer's Disease Prediction")
 
-uploaded = st.file_uploader("Upload CSV File", type=["csv"])
+# Load dataset
+df = pd.read_csv("alzheimers_disease_data.csv")
 
-if uploaded:
+# Clean data
+df = df.dropna()
 
-    df = pd.read_csv(uploaded)
+# Remove unnecessary columns
+drop_cols = []
 
-    df = df.dropna()
+if "PatientID" in df.columns:
+    drop_cols.append("PatientID")
 
-    drop_cols = []
+if "DoctorInCharge" in df.columns:
+    drop_cols.append("DoctorInCharge")
 
-    if "PatientID" in df.columns:
-        drop_cols.append("PatientID")
+df = df.drop(columns=drop_cols)
 
-    if "DoctorInCharge" in df.columns:
-        drop_cols.append("DoctorInCharge")
+# Features and target
+X = df.drop(columns=["Diagnosis"])
+y = df["Diagnosis"]
 
-    df = df.drop(columns=drop_cols)
+# Convert text columns
+X = pd.get_dummies(X)
 
-    X = df.drop(columns=["Diagnosis"])
-    y = df["Diagnosis"]
+# Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.3,
+    random_state=42
+)
 
-    X = pd.get_dummies(X)
+# Scale
+scaler = StandardScaler()
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.3,
-        random_state=42
-    )
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-    scaler = StandardScaler()
+# Train model
+model = LogisticRegression(max_iter=1000)
 
-    X_train = scaler.fit_transform(X_train)
+model.fit(X_train, y_train)
 
-    model = LogisticRegression(max_iter=1000)
+# Predict
+pred = model.predict(X_test)
 
-    model.fit(X_train, y_train)
+# Accuracy
+accuracy = accuracy_score(y_test, pred)
 
-    st.success("Model trained successfully!")
+# Output
+st.success("Model trained successfully!")
 
-    st.write("Rows:", len(df))
+st.subheader("Model Accuracy")
+
+st.write(f"{round(accuracy*100,2)} %")
+
+# Show dataset
+st.subheader("Dataset Preview")
+
+st.dataframe(df.head())
+
+# Prediction count
+st.subheader("Prediction Summary")
+
+st.write("Positive Predictions:", sum(pred))
+
+st.write("Total Tested:", len(pred))
